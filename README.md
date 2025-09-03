@@ -3,7 +3,9 @@ Recolouring images in R by mapping normalized grayscale values onto a custom col
 
 # Overview
 
-This project demonstrates how to transform an image by converting it into normalized grayscale values and then recolouring it with a custom colour palette using R. The workflow crops and resizes the input image, extracts pixel brightness values, normalizes them to a 0–1 scale, and maps them onto a user-defined palette to produce a stylized rendering.
+This Rmd contains a base for simple (and fun) image processing in R. This script takes an input photo, crops and resizes it, then converts it to greyscale so that every pixel is represented by a brightness value. These values, which originally range from 0 (black) to 255 (white), are normalised—rescaled to fit between 0 and 1 for easier handling. The pixel grid is then rebuilt as a data frame, and each pixel’s brightness is mapped onto a custom color palette (instead of plain gray), effectively “repainting” the image with new tones. For complete colour freedom, please refer to: https://sites.stat.columbia.edu/tzheng/files/Rcolor.pdf
+
+For reproducibility, users are encouraged to replace the file paths and image files with their own.
 
 Repository Contents:
 input/ – Example input images
