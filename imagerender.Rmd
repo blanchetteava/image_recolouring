@@ -1,0 +1,130 @@
+---
+title: "Image Rendering: Mapping Greyscale to Custom Colours"
+author: "Ava Blanchette"
+date: "2025-02-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Script introduction 
+
+This Rmd contains a base for simple (and fun) image processing in R. This script takes an input photo, crops and resizes it, then converts it to greyscale so that every pixel is represented by a brightness value. 
+
+These values, which originally range from 0 (black) to 255 (white), are normalised—rescaled to fit between 0 and 1 for easier handling. The pixel grid is then rebuilt as a data frame, and each pixel’s brightness is mapped onto a custom color palette (instead of plain gray), effectively “repainting” the image with new tones. For complete colour freedom, please refer to: https://sites.stat.columbia.edu/tzheng/files/Rcolor.pdf
+
+Finally, the script plots the transformed image and saves the result as a new PNG file.
+
+For reproducibility, users are encouraged to replace the file paths and image files with their own. 
+```{r Set file paths}
+path_to_input <- "/Users/avablanchette/Documents/Local/workshop/image_render/input/"
+path_to_output <- "/Users/avablanchette/Documents/Local/workshop/image_render/output/"
+```
+
+
+```{r Ruby}
+library(magick)
+library(tidyverse)
+
+# Load and resize image
+img <- image_read(paste0(path_to_input, "ruthie.jpeg")) %>% image_resize("400x400")
+
+# Get image dimensions
+info <- image_info(img)
+width <- info$width
+height <- info$height
+
+# Determine square crop size (smallest dimension)
+crop_size <- min(width, height)
+
+# Calculate crop starting point (rounded to avoid errors)
+x_offset <- round((width - crop_size) / 2)
+y_offset <- round((height - crop_size) / 2)
+
+# Crop image to centered square
+cropped_img <- image_crop(img, geometry = sprintf("%dx%d+%d+%d", 
+                                                  crop_size, crop_size, 
+                                                  x_offset, y_offset))
+
+# Resize to 400x400
+resized_img <- image_resize(cropped_img, "400x400")
+
+# Display result
+print(resized_img)
+
+# Convert to grayscale
+gray_img <- image_convert(resized_img, colorspace = "gray")
+print(gray_img)
+
+# Extract pixel data
+img_matrix <- image_data(gray_img) 
+print(dim(img_matrix))
+
+img_data <- as.integer(img_matrix[1,,])  # Convert from raw to integer
+img_data <- matrix(as.integer(img_matrix[1, , ]), nrow = dim(img_matrix)[2], ncol = dim(img_matrix)[3])
+
+# Normalize grayscale values (0 = darkest, 1 = lightest)
+img_data <- img_data / 255  # Raw data ranges from 0-255
+
+# Convert to a data frame for ggplot2
+df <- expand.grid(x = 1:ncol(img_data), y = nrow(img_data):1)  # Flip Y-axis
+df$value <- as.vector(img_data)
+
+# Define palette, build color ramp
+custom_palette <- colorRampPalette(c("royalblue4", "rosybrown3", "powderblue", "aliceblue")) #Built color ramp
+df$color <- custom_palette(100)[as.numeric(cut(df$value, breaks = 100))]
+
+# Plot
+ruby_color <- ggplot(df, aes(x, y, fill = color)) +
+  geom_raster() +
+  scale_fill_identity() +
+  theme_void() +
+  coord_fixed() 
+
+ruby_color
+
+# Save 
+ggsave("/Users/avablanchette/Documents/Local/Workshop/image_render/output/ruby_output.png", plot = ruby_color, width = 6, height = 6, dpi = 400)
+```
+
+
+```{r Dorset}
+library(magick)
+library(tidyverse)
+
+# Load image, resize. This image has higher pixel 
+img2 <- image_read(paste0(path_to_input, "dorset.jpg")) %>% image_resize("2075x3130")
+
+# Use image_convert & colorspace = "gray" to ensure the computer knows it's b&w
+gray_img2 <- image_convert(img2, colorspace = "gray")
+print(gray_img2)
+
+# Extract pixel data
+img_matrix2 <- image_data(gray_img2)
+print(img_matrix2) # Check 
+
+img_data2 <- as.integer(img_matrix2[1,,])  # Convert from raw to integer
+img_data2 <- matrix(img_data2, nrow = dim(img_matrix2)[2], ncol = dim(img_matrix2)[3])
+
+# Normalize greyscale values (0 = darkest, 1 = lightest)
+img_data2 <- img_data2 / 255  # 8-bit grayscale has a standard range of 0 (black) to 255 (white). This converts the range to what the color ramp expects: a range from 0-1 (where 255 = 1, 128 = 0.50, 0 = 0).
+
+# Convert to data frame for ggplot2
+df2 <- expand.grid(x = ncol(img_data2):1, y = nrow(img_data2):1)
+df2$value <- c(t(img_data2))
+
+# Color ramp
+custom_palette <- colorRampPalette(c("black", "sienna4", "rosybrown4", "khaki3", "powderblue", "white")) 
+df2$color <- custom_palette(100)[as.numeric(cut(df2$value, breaks = 100))]
+
+# Plot
+dorset_color <- ggplot(df2, aes(x, y, fill = color)) +
+  geom_raster() +
+  scale_fill_identity() +
+  theme_void() +
+  coord_fixed() 
+
+dorset_color
+```
